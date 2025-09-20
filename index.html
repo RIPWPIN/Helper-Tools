@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Size → m² Calculator</title>
+  <style>
+    :root{
+      --bg:#0f172a;        /* slate-900 */
+      --panel:#111827;     /* gray-900 */
+      --muted:#94a3b8;     /* slate-400 */
+      --text:#e2e8f0;      /* slate-200 */
+      --accent:#22d3ee;    /* cyan-400 */
+      --ok:#10b981;        /* emerald-500 */
+      --warn:#f59e0b;      /* amber-500 */
+      --err:#ef4444;       /* red-500 */
+      --ring: 0 0 0 3px rgba(34,211,238,.35);
+      font-synthesis-weight: none;
+      font-synthesis-style: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:linear-gradient(120deg,#0b1220,#0a0f1a);
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      display:grid; place-items:center; padding:24px;
+    }
+    .card{
+      width:min(840px, 95vw);
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:20px; padding:24px; box-shadow: 0 10px 35px rgba(0,0,0,.45);
+    }
+    h1{margin:0 0 6px; font-size:clamp(20px, 2.2vw, 28px)}
+    p.sub{margin:0 0 18px; color:var(--muted); font-size:14px}
+    .row{display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center; margin: 10px 0 6px}
+    .input{
+      display:flex; gap:10px; align-items:center; background:#0b1324; border:1px solid rgba(255,255,255,.08);
+      padding:12px 14px; border-radius:14px; transition: box-shadow .2s, border-color .2s;
+    }
+    .input:focus-within{ box-shadow: var(--ring); border-color: rgba(34,211,238,.6); }
+    .input input{
+      all:unset; color:var(--text); flex:1; font-size:16px;
+    }
+    .pill{font: 600 12px/1 ui-sans-serif,system-ui; text-transform:uppercase; letter-spacing:.06em; color:#071118; background:var(--accent); border-radius:999px; padding:6px 10px}
+    .muted{color:var(--muted)}
+    .kv{display:grid; grid-template-columns: 140px 1fr; gap:10px; align-items:center; margin-top:10px}
+    .kv .val{font-variant-numeric: tabular-nums;}
+    select{
+      appearance:none; -webkit-appearance:none; -moz-appearance:none;
+      background:#0b1324 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23e2e8f0"><path d="M7 10l5 5 5-5H7z"/></svg>') no-repeat right 10px center/18px;
+      border:1px solid rgba(255,255,255,.08); color:var(--text); border-radius:12px; padding:10px 34px 10px 12px; font-size:14px;
+    }
+    .result{
+      margin-top:18px; padding:16px; border-radius:16px; background: radial-gradient(1200px 1200px at 10% -10%, rgba(34,211,238,.15), transparent 35%), #0b1324;
+      border:1px solid rgba(34,211,238,.25);
+    }
+    .result .big{font-size:clamp(22px, 4.5vw, 34px); font-weight:700; letter-spacing:.02em}
+    .row-right{display:flex; align-items:center; gap:10px}
+    .corrected{font-weight:600; font-variant-numeric: tabular-nums; background:rgba(34,211,238,.15); border:1px dashed rgba(34,211,238,.45); padding:8px 10px; border-radius:12px}
+    .hint{font-size:12px; color:var(--muted)}
+    .error{color:var(--err)}
+    .footer{margin-top:14px; font-size:12px; color:var(--muted)}
+    .grid2{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px}
+    @media (max-width:560px){
+      .kv{grid-template-columns: 1fr;}
+      .grid2{grid-template-columns: 1fr;}
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1>Size input → Square meters</h1>
+    <p class="sub">Type a size like <b>2500x1200</b>. All characters except digits and the letter <b>x</b> are stripped automatically. Select the input unit (defaults to <b>mm</b>).</p>
+
+    <div class="row">
+      <label class="pill" for="raw">Input</label>
+      <div class="row-right">
+        <div class="input" style="min-width: min(400px, 65vw)">
+          <input id="raw" autocomplete="off" placeholder="e.g. 2500x1200 or 2,500 x 1,200" />
+        </div>
+        <select id="unit" aria-label="Unit">
+          <option value="mm" selected>mm</option>
+          <option value="cm">cm</option>
+          <option value="m">m</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kv">
+      <div class="muted">Corrected</div>
+      <div class="corrected" id="corrected">—</div>
+      <div class="muted">Parsed</div>
+      <div class="val" id="parsed">—</div>
+    </div>
+
+    <div class="result" id="result" aria-live="polite">
+      <div class="big" id="area">Enter two numbers (W x H) to calculate.</div>
+      <div class="grid2">
+        <div class="hint" id=" breakdown1 ">—</div>
+        <div class="hint" id=" breakdown2 ">—</div>
+      </div>
+    </div>
+
+    <div class="footer">Rules: keep digits and the letter <b>x</b> only · first two numbers are used as <b>width</b> and <b>height</b> · output is always in <b>m²</b>.</div>
+  </main>
+
+<script>
+(function(){
+  const raw = document.getElementById('raw');
+  const unitSel = document.getElementById('unit');
+  const correctedEl = document.getElementById('corrected');
+  const parsedEl = document.getElementById('parsed');
+  const areaEl = document.getElementById('area');
+  const b1 = document.getElementById(' breakdown1 ');
+  const b2 = document.getElementById(' breakdown2 ');
+
+  const toMeters = {
+    mm: v => v / 1000,
+    cm: v => v / 100,
+    m:  v => v
+  };
+
+  function clean(value){
+    // 1) allow digits and x/X; 2) normalize to lowercase x; 3) collapse consecutive x's
+    let v = (value || '').replace(/[^0-9xX]+/g,'').replace(/X/g,'x').replace(/x{2,}/g,'x');
+    // If it starts/ends with x, trim it
+    v = v.replace(/^x+|x+$/g, '');
+    return v;
+  }
+
+  function fmt(n, digits=2){
+    return new Intl.NumberFormat(undefined, {maximumFractionDigits:digits}).format(n);
+  }
+
+  function update(){
+    const unit = unitSel.value;
+    const cleaned = clean(raw.value);
+    correctedEl.textContent = cleaned || '—';
+
+    // pick first two integer groups as width/height
+    const nums = cleaned.match(/\d+/g) || [];
+    let w = nums[0] ? parseInt(nums[0],10) : null;
+    let h = nums[1] ? parseInt(nums[1],10) : null;
+
+    if(!w && !h){
+      parsedEl.textContent = '—';
+      areaEl.textContent = 'Enter two numbers (W x H) to calculate.';
+      b1.textContent = '—';
+      b2.textContent = '—';
+      return;
+    }
+
+    if(w && !h){
+      parsedEl.innerHTML = `<span class="error">Need height</span> · width: <b>${fmt(w,0)} ${unit}</b>`;
+      areaEl.textContent = 'Waiting for the second number…';
+      b1.textContent = '—';
+      b2.textContent = '—';
+      return;
+    }
+
+    // we have both
+    parsedEl.innerHTML = `width: <b>${fmt(w,0)} ${unit}</b> · height: <b>${fmt(h,0)} ${unit}</b>`;
+
+    // convert to meters
+    const w_m = toMeters[unit](w);
+    const h_m = toMeters[unit](h);
+    const area_m2 = w_m * h_m;
+
+    areaEl.innerHTML = `${fmt(area_m2, 6)} <span style="font-size:.65em; opacity:.8">m²</span>`;
+
+    b1.textContent = `Converted: ${fmt(w_m,6)} m × ${fmt(h_m,6)} m`;
+    b2.textContent = `Formula: (width × height) = (${w} ${unit} × ${h} ${unit}) → m²`;
+  }
+
+  raw.addEventListener('input', update);
+  unitSel.addEventListener('change', update);
+
+  // Demo starter
+  raw.value = '2,500 x 1,200';
+  update();
+})();
+</script>
+</body>
+</html>
