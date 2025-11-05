@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Size → m² Calculator</title>
+  <title>Size → m² Calculator + Special Char Replacer</title>
   <style>
     :root{
       --bg:#0f172a;        /* slate-900 */
@@ -27,8 +27,9 @@
       margin:0; background:linear-gradient(120deg,#0b1220,#0a0f1a);
       color:var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      display:grid; place-items:center; padding:24px;
+      display:grid; place-items:start; padding:24px;
     }
+    .stack{width:100%; display:grid; gap:22px; place-items:center}
     .card{
       width:min(840px, 95vw);
       background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
@@ -43,7 +44,7 @@
       padding:12px 14px; border-radius:14px; transition: box-shadow .2s, border-color .2s;
     }
     .input:focus-within{ box-shadow: var(--ring); border-color: rgba(34,211,238,.6); }
-    .input input{
+    .input input, .input textarea{
       all:unset; color:var(--text); flex:1; font-size:16px;
     }
     .pill{font: 600 12px/1 ui-sans-serif,system-ui; text-transform:uppercase; letter-spacing:.06em; color:#071118; background:var(--accent); border-radius:999px; padding:6px 10px}
@@ -70,54 +71,108 @@
       .kv{grid-template-columns: 1fr;}
       .grid2{grid-template-columns: 1fr;}
     }
+
+    /* —— Toggle switch used in app #2 —— */
+    .switch-container{display:flex; align-items:center; gap:10px; margin: 10px 0}
+    .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+    .switch input { opacity:0; width:0; height:0; }
+    .toggle-track {
+      position:absolute; inset:0; cursor:pointer;
+      background-color:#334155; transition:.25s; border-radius:34px; border:1px solid rgba(255,255,255,.08);
+    }
+    .toggle-track::before{
+      content:""; position:absolute; height:26px; width:26px; left:4px; bottom:4px; background:white;
+      border-radius:50%; transition:.25s;
+    }
+    .switch input:checked + .toggle-track{ background-color:#22d3ee; }
+    .switch input:checked + .toggle-track::before{ transform: translateX(26px); }
+    .symbol-label{font-weight:700; font-size:1rem}
+    .boxlabel{display:flex; align-items:center; gap:10px}
+    .textarea{display:flex; flex-direction:column; gap:10px}
+    .ta{background:#0b1324; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px 14px; min-height:110px}
+    .readonly{opacity:.9}
+    .note{font-size:12px; color:var(--muted)}
   </style>
 </head>
 <body>
-  <main class="card" role="main">
-    <h1>Size input → Square meters</h1>
-    <p class="sub">Type a size like <b>2500x1200</b>. All characters except digits and the letter <b>x</b> are stripped automatically. Select the input unit (defaults to <b>mm</b>).</p>
+  <div class="stack">
+    <!-- ===== App #1: Size → m² Calculator ===== -->
+    <main class="card" role="main" aria-labelledby="title-area">
+      <h1 id="title-area">Size input → Square meters</h1>
+      <p class="sub">Type a size like <b>2500x1200</b>. All characters except digits and the letter <b>x</b> are stripped automatically. Select the input unit (defaults to <b>mm</b>).</p>
 
-    <div class="row">
-      <label class="pill" for="raw">Input</label>
-      <div class="row-right">
-        <div class="input" style="min-width: min(400px, 65vw)">
-          <input id="raw" autocomplete="off" placeholder="e.g. 2500x1200 or 2,500 x 1,200" />
+      <div class="row">
+        <label class="pill" for="raw">Input</label>
+        <div class="row-right">
+          <div class="input" style="min-width: min(400px, 65vw)">
+            <input id="raw" autocomplete="off" placeholder="e.g. 2500x1200 or 2,500 x 1,200" />
+          </div>
+          <select id="unit" aria-label="Unit">
+            <option value="mm" selected>mm</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+          </select>
         </div>
-        <select id="unit" aria-label="Unit">
-          <option value="mm" selected>mm</option>
-          <option value="cm">cm</option>
-          <option value="m">m</option>
-        </select>
       </div>
-    </div>
 
-    <div class="kv">
-      <div class="muted">Corrected</div>
-      <div class="corrected" id="corrected">—</div>
-      <div class="muted">Parsed</div>
-      <div class="val" id="parsed">—</div>
-    </div>
-
-    <div class="result" id="result" aria-live="polite">
-      <div class="big" id="area">Enter two numbers (W x H) to calculate.</div>
-      <div class="grid2">
-        <div class="hint" id=" breakdown1 ">—</div>
-        <div class="hint" id=" breakdown2 ">—</div>
+      <div class="kv">
+        <div class="muted">Corrected</div>
+        <div class="corrected" id="corrected">—</div>
+        <div class="muted">Parsed</div>
+        <div class="val" id="parsed">—</div>
       </div>
-    </div>
 
-    <div class="footer">Rules: keep digits and the letter <b>x</b> only · first two numbers are used as <b>width</b> and <b>height</b> · output is always in <b>m²</b>.</div>
-  </main>
+      <div class="result" id="result" aria-live="polite">
+        <div class="big" id="area">Enter two numbers (W x H) to calculate.</div>
+        <div class="grid2">
+          <div class="hint" id="breakdown1">—</div>
+          <div class="hint" id="breakdown2">—</div>
+        </div>
+      </div>
+
+      <div class="footer">Rules: keep digits and the letter <b>x</b> only · first two numbers are used as <b>width</b> and <b>height</b> · output is always in <b>m²</b>.</div>
+    </main>
+
+    <!-- ===== App #2: Special Character Replacer (with selector switch) ===== -->
+    <section class="card" role="region" aria-labelledby="title-replacer">
+      <h1 id="title-replacer">Special Character Replacer</h1>
+      <p class="sub">Type or paste text; any character that is <em>not</em> a letter, digit, or whitespace will be replaced live with your selected symbol.</p>
+
+      <div class="boxlabel">
+        <span class="pill">Replacement</span>
+        <div class="switch-container" aria-label="Replacement symbol switch">
+          <span class="symbol-label" aria-hidden="true">*</span>
+          <label class="switch">
+            <input type="checkbox" id="symbolSwitch" aria-label="Toggle replacement symbol: * or ^">
+            <span class="toggle-track" aria-hidden="true"></span>
+          </label>
+          <span class="symbol-label" aria-hidden="true">^</span>
+        </div>
+        <span class="note" id="currentSymbolLabel" aria-live="polite">(using “*”)</span>
+      </div>
+
+      <div class="textarea">
+        <div class="input">
+          <textarea id="replInput" class="ta" placeholder="Paste or type here…"></textarea>
+        </div>
+        <div class="input readonly">
+          <textarea id="replOutput" class="ta" readonly placeholder="Output appears here…"></textarea>
+        </div>
+      </div>
+      <div class="footer">Rule: a “special character” is anything except <b>A–Z</b>, <b>a–z</b>, <b>0–9</b>, and whitespace.</div>
+    </section>
+  </div>
 
 <script>
+/* ===== App #1 Script (kept intact) ===== */
 (function(){
   const raw = document.getElementById('raw');
   const unitSel = document.getElementById('unit');
   const correctedEl = document.getElementById('corrected');
   const parsedEl = document.getElementById('parsed');
   const areaEl = document.getElementById('area');
-  const b1 = document.getElementById(' breakdown1 ');
-  const b2 = document.getElementById(' breakdown2 ');
+  const b1 = document.getElementById('breakdown1');
+  const b2 = document.getElementById('breakdown2');
 
   const toMeters = {
     mm: v => v / 1000,
@@ -183,6 +238,43 @@
   // Demo starter
   raw.value = '2,500 x 1,200';
   update();
+})();
+
+/* ===== App #2: Special Character Replacer with selector switch ===== */
+(function(){
+  const inputField = document.getElementById('replInput');
+  const outputField = document.getElementById('replOutput');
+  const switchButton = document.getElementById('symbolSwitch');
+  const currentSymbolLabel = document.getElementById('currentSymbolLabel');
+
+  let replacementSymbol = '*'; // default when switch is OFF
+
+  switchButton.addEventListener('change', () => {
+    replacementSymbol = switchButton.checked ? '^' : '*';
+    currentSymbolLabel.textContent = `(using “${replacementSymbol}”)`;
+    replaceSpecials();
+  });
+
+  inputField.addEventListener('input', replaceSpecials);
+
+  function replaceSpecials(){
+    const input = inputField.value;
+    let output = '';
+
+    for (let ch of input){
+      // Special = NOT a-z, A-Z, 0-9, or whitespace
+      if (/[^a-zA-Z0-9\s]/.test(ch)){
+        output += replacementSymbol;
+      } else {
+        output += ch;
+      }
+    }
+    outputField.value = output;
+  }
+
+  // Optional demo text:
+  inputField.value = 'Hello, World! 100% ready @ 10:30?';
+  replaceSpecials();
 })();
 </script>
 </body>
